@@ -1,4 +1,4 @@
-import { LucideFileDown, LucideMoreHorizontal, LucidePlus, LucideSearch } from 'lucide-react'
+import { LucideFileDown, LucideFilter, LucideMoreHorizontal, LucidePlus, LucideSearch } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table'
 import { Header } from './components/header'
 import { Tabs } from './components/tabs'
@@ -7,6 +7,8 @@ import { Control, Input } from './components/ui/input'
 import { Pagination } from './components/pagination'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
+import { FormEvent, useEffect, useState } from 'react'
+import useDebounceValue from './hooks/use-debounce-value'
 
 export interface TagsResponse {
   first: number
@@ -26,18 +28,41 @@ export interface Tag {
 }
 
 export function App() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlFilter = searchParams.get('filter') ?? ''
+  const [filter, setFilter] = useState(urlFilter)
+  const debouncedFilter = useDebounceValue(filter, 1000)
   const page = searchParams.get('page') ? Number(searchParams.get('page')) : 1
 
   const { data: tagsResponse, isLoading } = useQuery<TagsResponse>({
-    queryKey: ['get-tags', page],
+    queryKey: ['get-tags', page, urlFilter],
     queryFn: async () => {
-      const response = await fetch(`http://localhost:3333/tags?_page=${page}&_per_page=10`)
+      const response = await fetch(`http://localhost:3333/tags?_page=${page}&_per_page=10&title=${urlFilter}`)
       const data = await response.json()
       return data
     },
     placeholderData: keepPreviousData
   })
+
+  useEffect(() => {
+    setSearchParams(params => {
+      params.set('page', '1')
+
+      return params
+    })
+  }, [debouncedFilter, setSearchParams])
+
+  function handleFilter(event: FormEvent) {
+    event.preventDefault()
+    const formattedFilter = filter.charAt(0).toUpperCase() + filter.slice(1)
+
+    setSearchParams(params => {
+      params.set('page', '1')
+      params.set('filter', formattedFilter)
+
+      return params
+    })
+  }
 
   if (isLoading) {
     return null
@@ -60,13 +85,23 @@ export function App() {
         </div>
 
         <div className="flex items-center justify-between">
-          <Input variant='filter'>
-            <LucideSearch className="size-3" />
-            <Control placeholder="Search tags..." />
-          </Input>
+          <form onSubmit={handleFilter} className="flex items-center gap-3">
+            <Input variant='filter'>
+              <LucideSearch className="size-3" />
+              <Control
+                placeholder="Search tags..."
+                onChange={e => setFilter(e.target.value)}
+                value={filter}
+              />
+            </Input>
+            <Button type="submit">
+              <LucideFilter className="size-3" />
+              Filter
+            </Button>
+          </form>
 
           <Button>
-            <LucideFileDown />
+            <LucideFileDown className="size-3" />
             Export
           </Button>
         </div>
