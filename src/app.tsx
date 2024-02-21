@@ -1,3 +1,4 @@
+import { FormEvent, useState } from 'react'
 import { LucideFileDown, LucideFilter, LucideMoreHorizontal, LucidePlus, LucideSearch } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table'
 import { Header } from './components/header'
@@ -7,8 +8,6 @@ import { Control, Input } from './components/ui/input'
 import { Pagination } from './components/pagination'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { FormEvent, useEffect, useState } from 'react'
-import useDebounceValue from './hooks/use-debounce-value'
 
 export interface TagsResponse {
   first: number
@@ -31,7 +30,6 @@ export function App() {
   const [searchParams, setSearchParams] = useSearchParams()
   const urlFilter = searchParams.get('filter') ?? ''
   const [filter, setFilter] = useState(urlFilter)
-  const debouncedFilter = useDebounceValue(filter, 1000)
   const page = searchParams.get('page') ? Number(searchParams.get('page')) : 1
 
   const { data: tagsResponse, isLoading } = useQuery<TagsResponse>({
@@ -43,14 +41,6 @@ export function App() {
     },
     placeholderData: keepPreviousData
   })
-
-  useEffect(() => {
-    setSearchParams(params => {
-      params.set('page', '1')
-
-      return params
-    })
-  }, [debouncedFilter, setSearchParams])
 
   function handleFilter(event: FormEvent) {
     event.preventDefault()
